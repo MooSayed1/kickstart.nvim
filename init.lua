@@ -789,7 +789,7 @@ require('lazy').setup({
           -- Accept ([y]es) the completion.
           --  This will auto-import if your LSP supports it.
           --  This will expand snippets if the LSP sent a snippet.
-          ['<C-y>'] = cmp.mapping.confirm { select = true },
+          ['<CR>'] = cmp.mapping.confirm { select = true },
 
           -- If you prefer more traditional completion keymaps,
           -- you can uncomment the following lines
@@ -849,7 +849,8 @@ require('lazy').setup({
       -- Load the colorscheme here.
       -- Like many other themes, this one has different styles, and you could load
       -- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
-      vim.cmd.colorscheme 'tokyonight-night'
+      --vim.cmd.colorscheme 'tokyonight-night'
+      vim.cmd.colorscheme 'onedark'
 
       -- You can configure highlights by doing something like:
       vim.cmd.hi 'Comment gui=none'
@@ -902,7 +903,7 @@ require('lazy').setup({
     main = 'nvim-treesitter.configs', -- Sets main module to use for opts
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter`
     opts = {
-      ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' },
+      ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc', 'cpp' },
       -- Autoinstall languages that are not installed
       auto_install = true,
       highlight = {
@@ -1017,7 +1018,21 @@ require('lazy').setup({
       require('onedark').load()
     end,
   },
+  {
+    'goolord/alpha-nvim',
+    dependencies = { 'MaximilianLloyd/ascii.nvim', 'MunifTanjim/nui.nvim' },
+    config = function()
+      local alpha = require 'alpha'
+      local dashboard = require 'alpha.themes.dashboard'
+      local ascii = require 'ascii'
 
+      -- Set ASCII header with random global art
+      dashboard.section.header.val = ascii.get_random_global()
+
+      -- Set up alpha with modified dashboard
+      alpha.setup(dashboard.opts)
+    end,
+  },
   -- END OF MY PLUGINS
 }, {
   ui = {
@@ -1041,5 +1056,11 @@ require('lazy').setup({
   },
 })
 
+vim.api.nvim_exec(
+  [[
+  autocmd VimEnter * lua print(table.concat(require('ascii').get_random_global(), '\n'))
+]],
+  false
+)
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
