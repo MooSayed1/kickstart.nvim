@@ -1056,11 +1056,11 @@ require('lazy').setup({
   },
 })
 
-vim.api.nvim_exec(
-  [[
-  autocmd VimEnter * lua print(table.concat(require('ascii').get_random_global(), '\n'))
-]],
-  false
-)
+--vim.api.nvim_exec(
+--  [[
+--  autocmd VimEnter * lua print(table.concat(require('ascii').get_random_global(), '\n'))
+--]],
+--  false
+--)
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
