@@ -1033,6 +1033,13 @@ require('lazy').setup({
       alpha.setup(dashboard.opts)
     end,
   },
+  {
+    'windwp/nvim-autopairs',
+    event = 'InsertEnter',
+    config = true,
+    -- use opts = {} for passing setup options
+    -- this is equivalent to setup({}) function
+  },
   -- END OF MY PLUGINS
 }, {
   ui = {
