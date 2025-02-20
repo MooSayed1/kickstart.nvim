@@ -8,14 +8,12 @@
 //
 #include <bits/stdc++.h>
 using namespace std;
-#include <ext/pb_ds/tree_policy.hpp>
 #include <ext/pb_ds/assoc_container.hpp>
-namespace __gnu_pbds{
-    typedef tree<long long,
-            null_type,
-            less<long long>,
-    rb_tree_tag,
-    tree_order_statistics_node_update> ordered_set; 
+#include <ext/pb_ds/tree_policy.hpp>
+namespace __gnu_pbds {
+typedef tree<long long, null_type, less<long long>, rb_tree_tag,
+             tree_order_statistics_node_update>
+    ordered_set;
 }
 using namespace __gnu_pbds;
 #ifdef MOHAMED
@@ -38,12 +36,13 @@ using namespace __gnu_pbds;
 #define no cout << "NO\n"
 #define vll vector<ll>
 #define vi vector<int>
-#define pii pair<int,int>
+#define pii pair<int, int>
 #define OO 2e9
 #define endl "\n"
 #define popCnt(x) (__builtin_popcountll(x))
 const int dx[]{0, 1, 0, -1, -1, -1, 1, 1};
 const int dy[]{1, 0, -1, 0, -1, 1, -1, 1};
+const int MOD = 1e9 + 7;
 
 template <typename T> istream &operator>>(istream &input, vector<T> &data) {
   for (T &x : data)
@@ -58,9 +57,7 @@ ostream &operator<<(ostream &output, const vector<T> &data) {
   return output;
 }
 
-void solve() {
-
-}
+void solve() {}
 int32_t main() {
 
   //  freopen("whereami.in", "r", stdin);
