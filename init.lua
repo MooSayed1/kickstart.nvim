@@ -1061,6 +1061,15 @@ require('lazy').setup({
       vim.keymap.set('v', '<leader>/', '<Plug>(comment_toggle_linewise_visual)', { silent = true, desc = 'Toggle Comment in Visual Mode' })
     end,
   },
+  {
+    'L3MON4D3/LuaSnip',
+    version = 'v2.*',
+    build = 'make install_jsregexp',
+    config = function()
+      require('luasnip').setup {}
+      require('luasnip.loaders.from_lua').load { paths = '~/.config/nvim/lua/snippets' } -- Load custom snippets
+    end,
+  },
   -- END OF MY PLUGINS
 }, {
   ui = {
