@@ -5,15 +5,15 @@ local i = ls.insert_node
 
 ls.add_snippets('cpp', {
   -- DP Template Snippet
-  s('dynamicProgramingMemo', {
+  s('memo', {
     t {
       'int n;',
       'cin >> n;',
       'vi arr(n);',
       'cin >> arr;',
-      'vector<vi>dp(n,vi(m,-1));',
+      'vector dp(n+1);',
       '',
-      'auto go = [&](auto &&go, int i, int ssm) -> int {',
+      'auto go = [&](auto &&go, int i) -> int {',
       '    ',
     },
     i(1),
