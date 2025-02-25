@@ -1066,8 +1066,19 @@ require('lazy').setup({
     version = 'v2.*',
     build = 'make install_jsregexp',
     config = function()
-      require('luasnip').setup {}
-      require('luasnip.loaders.from_lua').load { paths = '~/.config/nvim/lua/snippets' } -- Load custom snippets
+      local ls = require 'luasnip'
+
+      -- Setup LuaSnip
+      ls.setup {}
+
+      -- Lazy load Lua-based snippets
+      require('luasnip.loaders.from_lua').lazy_load { paths = '~/.config/nvim/lua/snippets' }
+
+      -- Lazy load SnipMate-style snippets
+      require('luasnip.loaders.from_snipmate').lazy_load { paths = { '~/.config/nvim/lua/snippets' } }
+
+      -- Optional: Lazy load VSCode-style snippets (if you use them)
+      require('luasnip.loaders.from_vscode').lazy_load()
     end,
   },
   -- END OF MY PLUGINS
