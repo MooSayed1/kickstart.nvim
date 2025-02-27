@@ -183,6 +183,9 @@ vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' }
 
 -- Keybinds to make split navigation easier.
 --  Use CTRL+<hjkl> to switch between windows
+
+vim.api.nvim_set_keymap('n', '<Tab>', ':tabnext<CR>', { noremap = true, silent = true })
+vim.api.nvim_set_keymap('n', '<S-Tab>', ':tabprev<CR>', { noremap = true, silent = true })
 --
 --  See `:help wincmd` for a list of all window commands
 vim.keymap.set('n', '<C-h>', '<C-w><C-h>', { desc = 'Move focus to the left window' })
@@ -1113,6 +1116,12 @@ require('lazy').setup({
   },
 })
 
+vim.api.nvim_create_autocmd('BufReadPost', {
+  pattern = '*/CompetitiveProgramming/*',
+  callback = function()
+    vim.cmd 'tabnew %' -- Open the received problem in a new tab
+  end,
+})
 --vim.api.nvim_exec(
 --  [[
 --  autocmd VimEnter * lua print(table.concat(require('ascii').get_random_global(), '\n'))
