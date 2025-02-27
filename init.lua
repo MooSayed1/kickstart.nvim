@@ -833,7 +833,7 @@ require('lazy').setup({
             -- set group index to 0 to skip loading LuaLS completions as lazydev recommends it
             group_index = 0,
           },
-          -- { name = 'nvim_lsp' },
+          -- { name = 'nvim_lsp' },  -- comment LSP
           { name = 'luasnip' },
           { name = 'path' },
         },
@@ -906,7 +906,7 @@ require('lazy').setup({
     main = 'nvim-treesitter.configs', -- Sets main module to use for opts
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter`
     opts = {
-      ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc', 'cpp' },
+      ensure_installed = { 'bash', 'c_sharp', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc', 'cpp' },
       -- Autoinstall languages that are not installed
       auto_install = true,
       highlight = {
@@ -1079,6 +1079,15 @@ require('lazy').setup({
 
       -- Optional: Lazy load VSCode-style snippets (if you use them)
       require('luasnip.loaders.from_vscode').lazy_load()
+    end,
+  },
+
+  {
+    'nvim-tree/nvim-tree.lua',
+    dependencies = { 'nvim-tree/nvim-web-devicons' },
+    config = function()
+      require('nvim-tree').setup {}
+      vim.api.nvim_set_keymap('n', '<C-n>', ':NvimTreeToggle<CR>', { noremap = true, silent = true })
     end,
   },
   -- END OF MY PLUGINS
