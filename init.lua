@@ -836,7 +836,7 @@ require('lazy').setup({
             -- set group index to 0 to skip loading LuaLS completions as lazydev recommends it
             group_index = 0,
           },
-          -- { name = 'nvim_lsp' },  -- comment LSP
+          -- { name = 'nvim_lsp' }, -- comment LSPMO
           { name = 'luasnip' },
           { name = 'path' },
         },
@@ -1093,6 +1093,18 @@ require('lazy').setup({
       vim.api.nvim_set_keymap('n', '<C-n>', ':NvimTreeToggle<CR>', { noremap = true, silent = true })
     end,
   },
+  {
+    'iabdelkareem/csharp.nvim',
+    dependencies = {
+      'williamboman/mason.nvim', -- Required, automatically installs omnisharp
+      'mfussenegger/nvim-dap',
+      'Tastyep/structlog.nvim', -- Optional, but highly recommended for debugging
+    },
+    config = function()
+      require('mason').setup() -- Mason setup must run before csharp, only if you want to use omnisharp
+      require('csharp').setup()
+    end,
+  },
   -- END OF MY PLUGINS
 }, {
   ui = {
@@ -1116,12 +1128,6 @@ require('lazy').setup({
   },
 })
 
-vim.api.nvim_create_autocmd('BufReadPost', {
-  pattern = '*/CompetitiveProgramming/*',
-  callback = function()
-    vim.cmd 'tabnew %' -- Open the received problem in a new tab
-  end,
-})
 --vim.api.nvim_exec(
 --  [[
 --  autocmd VimEnter * lua print(table.concat(require('ascii').get_random_global(), '\n'))
