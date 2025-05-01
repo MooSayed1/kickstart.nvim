@@ -26,6 +26,8 @@ using namespace std;
 #define endl "\n"
 #define popCnt(x) (__builtin_popcountll(x))
 const int MOD = 1e9 + 7;
+const int dx[]{0, 1, 0, -1, -1, -1, 1, 1};
+const int dy[]{1, 0, -1, 0, -1, 1, -1, 1};
 
 template <typename T> istream &operator>>(istream &input, vector<T> &data) {
   for (T &x : data)

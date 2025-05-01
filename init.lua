@@ -836,7 +836,8 @@ require('lazy').setup({
             -- set group index to 0 to skip loading LuaLS completions as lazydev recommends it
             group_index = 0,
           },
-          -- { name = 'nvim_lsp' },  -- comment LSPMO
+          { name = 'copilot' },
+          --{ name = 'nvim_lsp' }, -- comment LSPMO
           { name = 'luasnip' },
           { name = 'path' },
         },
@@ -1093,6 +1094,30 @@ require('lazy').setup({
       vim.api.nvim_set_keymap('n', '<C-n>', ':NvimTreeToggle<CR>', { noremap = true, silent = true })
     end,
   },
+  {
+    'zbirenbaum/copilot.lua',
+    event = 'InsertEnter',
+    config = function()
+      require('copilot').setup {
+        suggestion = {
+          enabled = true,
+          auto_trigger = true,
+          keymap = {
+            accept = '<Tab>',
+          },
+        },
+        panel = { enabled = false },
+      }
+    end,
+  },
+
+  {
+    'zbirenbaum/copilot-cmp',
+    requires = { 'zbirenbaum/copilot.lua' },
+    config = function()
+      require('copilot_cmp').setup()
+    end,
+  },
   -- END OF MY PLUGINS
 }, {
   ui = {
@@ -1122,6 +1147,7 @@ vim.api.nvim_create_autocmd('BufReadPost', {
     vim.cmd 'tabnew %' -- Open the received problem in a new tab
   end,
 })
+
 --vim.api.nvim_exec(
 --  [[
 --  autocmd VimEnter * lua print(table.concat(require('ascii').get_random_global(), '\n'))
