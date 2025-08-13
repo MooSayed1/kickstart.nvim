@@ -836,7 +836,7 @@ require('lazy').setup({
             -- set group index to 0 to skip loading LuaLS completions as lazydev recommends it
             group_index = 0,
           },
-          { name = 'copilot' },
+          -- { name = 'copilot' },
           --{ name = 'nvim_lsp' }, -- comment LSPMO
           { name = 'luasnip' },
           { name = 'path' },
@@ -1094,30 +1094,30 @@ require('lazy').setup({
       vim.api.nvim_set_keymap('n', '<C-n>', ':NvimTreeToggle<CR>', { noremap = true, silent = true })
     end,
   },
-  {
-    'zbirenbaum/copilot.lua',
-    event = 'InsertEnter',
-    config = function()
-      require('copilot').setup {
-        suggestion = {
-          enabled = true,
-          auto_trigger = true,
-          keymap = {
-            accept = '<Tab>',
-          },
-        },
-        panel = { enabled = false },
-      }
-    end,
-  },
+  -- {
+  --   'zbirenbaum/copilot.lua',
+  --   event = 'InsertEnter',
+  --   config = function()
+  --     require('copilot').setup {
+  --       suggestion = {
+  --         enabled = true,
+  --         auto_trigger = true,
+  --         keymap = {
+  --           accept = '<Tab>',
+  --         },
+  --       },
+  --       panel = { enabled = false },
+  --     }
+  --   end,
+  -- },
 
-  {
-    'zbirenbaum/copilot-cmp',
-    requires = { 'zbirenbaum/copilot.lua' },
-    config = function()
-      require('copilot_cmp').setup()
-    end,
-  },
+  -- {
+  --   'zbirenbaum/copilot-cmp',
+  --   requires = { 'zbirenbaum/copilot.lua' },
+  --   config = function()
+  --     require('copilot_cmp').setup()
+  --   end,
+  -- },
   -- END OF MY PLUGINS
 }, {
   ui = {
