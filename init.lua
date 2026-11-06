@@ -167,6 +167,12 @@ vim.keymap.set('n', '<C-c>', '<cmd>%y+<CR>')
 -- Diagnostic keymaps
 vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
 
+-- Show diagnostics inline (nvim 0.11+ disables virtual text by default)
+vim.diagnostic.config {
+  virtual_text = true,
+  severity_sort = true,
+}
+
 -- Exit terminal mode in the builtin terminal with a shortcut that is a bit easier
 -- for people to discover. Otherwise, you normally need to press <C-\><C-n>, which
 -- is not what someone will guess without a bit more experience.
@@ -174,6 +180,52 @@ vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagn
 -- NOTE: This won't work in all terminal emulators/tmux/etc. Try your own mapping
 -- or just use <C-\><C-n> to exit terminal mode
 vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
+
+-- A hidden terminal keeps its shell and running commands alive.
+local floating_terminal = { buf = nil, win = nil, job = nil }
+local function toggle_terminal()
+  if floating_terminal.win and vim.api.nvim_win_is_valid(floating_terminal.win) then
+    vim.api.nvim_win_hide(floating_terminal.win)
+    floating_terminal.win = nil
+    return
+  end
+
+  local running = floating_terminal.job and vim.fn.jobwait({ floating_terminal.job }, 0)[1] == -1
+  local new_shell = not (floating_terminal.buf and vim.api.nvim_buf_is_valid(floating_terminal.buf) and running)
+  if new_shell then
+    if floating_terminal.buf and vim.api.nvim_buf_is_valid(floating_terminal.buf) then
+      vim.api.nvim_buf_delete(floating_terminal.buf, { force = true })
+    end
+    floating_terminal.buf = vim.api.nvim_create_buf(false, true)
+    vim.bo[floating_terminal.buf].bufhidden = 'hide'
+  end
+
+  local width = math.max(1, math.floor(vim.o.columns * 0.85))
+  local height = math.max(1, math.floor((vim.o.lines - 2) * 0.8))
+  -- Start new shells at the current file's project root.
+  local file = vim.api.nvim_buf_get_name(0)
+  local cwd = vim.fs.root(file ~= '' and file or vim.fn.getcwd(), { '.git', 'CMakeLists.txt' }) or vim.fn.getcwd()
+  floating_terminal.win = vim.api.nvim_open_win(floating_terminal.buf, true, {
+    relative = 'editor',
+    width = width,
+    height = height,
+    col = math.floor((vim.o.columns - width) / 2),
+    row = math.max(0, math.floor((vim.o.lines - height - 2) / 2)),
+    style = 'minimal',
+    border = 'rounded',
+    title = ' Terminal · F12 to hide ',
+    title_pos = 'center',
+  })
+  if new_shell then
+    floating_terminal.job = vim.fn.jobstart(vim.o.shell, { term = true, cwd = cwd })
+    if floating_terminal.job <= 0 then
+      vim.notify('Could not start terminal shell: ' .. vim.o.shell, vim.log.levels.ERROR)
+    end
+  end
+  vim.cmd.startinsert()
+end
+vim.keymap.set({ 'n', 't' }, '<F12>', toggle_terminal, { desc = 'Toggle floating terminal' })
+vim.keymap.set('n', '<leader>tt', toggle_terminal, { desc = '[T]oggle [T]erminal' })
 
 -- TIP: Disable arrow keys in normal mode
 -- vim.keymap.set('n', '<left>', '<cmd>echo "Use h to move!!"<CR>')
@@ -186,6 +238,9 @@ vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' }
 
 vim.api.nvim_set_keymap('n', '<Tab>', ':tabnext<CR>', { noremap = true, silent = true })
 vim.api.nvim_set_keymap('n', '<S-Tab>', ':tabprev<CR>', { noremap = true, silent = true })
+vim.keymap.set('n', '<leader>tn', '<cmd>tab split<CR>', { desc = 'Open current file in a new [T]ab' })
+vim.keymap.set('n', '<leader>tc', '<cmd>tabclose<CR>', { desc = '[T]ab [C]lose' })
+require('custom.tabline').setup()
 --
 --  See `:help wincmd` for a list of all window commands
 vim.keymap.set('n', '<C-h>', '<C-w><C-h>', { desc = 'Move focus to the left window' })
@@ -195,8 +250,19 @@ vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper win
 
 vim.keymap.set('v', '<leader>p', '"0P', { noremap = true, silent = true, desc = 'Paste Without Delete From Buffer' }) -- Paste
 
+-- LSP Navigation keybindings (VS Code-style)
+vim.keymap.set('n', 'gd', vim.lsp.buf.definition, { noremap = true, silent = true, desc = 'Go to definition' })
+vim.keymap.set('n', 'gi', vim.lsp.buf.implementation, { noremap = true, silent = true, desc = 'Go to implementation' })
+vim.keymap.set('n', 'gr', vim.lsp.buf.references, { noremap = true, silent = true, desc = 'Go to references' })
+vim.keymap.set('n', 'gt', vim.lsp.buf.type_definition, { noremap = true, silent = true, desc = 'Go to type definition' })
+vim.keymap.set('n', 'gh', '<C-o>', { noremap = true, silent = true, desc = 'Navigate back' })
+vim.keymap.set('n', '<leader>f', function()
+  vim.lsp.buf.format { async = true }
+end, { noremap = true, silent = true, desc = 'Format document' })
+
 -- [[ Basic Autocommands ]]
 --  See `:help lua-guide-autocommands`
+require('custom.autosave').setup()
 
 -- Highlight when yanking (copying) text
 --  Try it with `yap` in normal mode
@@ -527,7 +593,9 @@ require('lazy').setup({
 
           -- Jump to the implementation of the word under your cursor.
           --  Useful when your language has ways of declaring types without an actual implementation.
-          map('gI', require('telescope.builtin').lsp_implementations, '[G]oto [I]mplementation')
+          -- Native navigation builds positions separately for each client's encoding.
+          map('gi', vim.lsp.buf.implementation, '[G]oto [I]mplementation')
+          map('gI', vim.lsp.buf.implementation, '[G]oto [I]mplementation')
 
           -- Jump to the type of the word under your cursor.
           --  Useful when you're not sure what type a variable is and you want to see
@@ -554,13 +622,18 @@ require('lazy').setup({
           --  For example, in C this would take you to the header.
           map('gD', vim.lsp.buf.declaration, '[G]oto [D]eclaration')
 
+          -- Let Pyright provide Python hover information when Ruff is also attached.
+          local client = vim.lsp.get_client_by_id(event.data.client_id)
+          if client and client.name == 'ruff' then
+            client.server_capabilities.hoverProvider = false
+          end
+
           -- The following two autocommands are used to highlight references of the
           -- word under your cursor when your cursor rests there for a little while.
           --    See `:help CursorHold` for information about when this is executed
           --
           -- When you move your cursor, the highlights will be cleared (the second autocommand).
-          local client = vim.lsp.get_client_by_id(event.data.client_id)
-          if client and client.supports_method(vim.lsp.protocol.Methods.textDocument_documentHighlight) then
+          if client and client:supports_method(vim.lsp.protocol.Methods.textDocument_documentHighlight, event.buf) then
             local highlight_augroup = vim.api.nvim_create_augroup('kickstart-lsp-highlight', { clear = false })
             vim.api.nvim_create_autocmd({ 'CursorHold', 'CursorHoldI' }, {
               buffer = event.buf,
@@ -587,7 +660,7 @@ require('lazy').setup({
           -- code, if the language server you are using supports them
           --
           -- This may be unwanted, since they displace some of your code
-          if client and client.supports_method(vim.lsp.protocol.Methods.textDocument_inlayHint) then
+          if client and client:supports_method(vim.lsp.protocol.Methods.textDocument_inlayHint, event.buf) then
             map('<leader>th', function()
               vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled { bufnr = event.buf })
             end, '[T]oggle Inlay [H]ints')
@@ -622,33 +695,19 @@ require('lazy').setup({
       --  - settings (table): Override the default settings passed when initializing the server.
       --        For example, to see the options for `lua_ls`, you could go to: https://luals.github.io/wiki/settings/
       local servers = {
+        bashls = {},
         clangd = {},
         -- gopls = {},
-        pyright = {},
-
-        pylsp = {
+        pyright = {
           settings = {
-            pylsp = {
-              plugins = {
-                pycodestyle = { enabled = true, maxLineLength = 120 },
-                pyflakes = { enabled = true },
-                pylint = { enabled = false },
-                yapf = { enabled = false },
-                autopep8 = { enabled = false },
-              },
-            },
+            pyright = { disableOrganizeImports = true },
           },
         },
+        ruff = {},
+        ts_ls = {},
         -- rust_analyzer = {},
         -- ... etc. See `:help lspconfig-all` for a list of all the pre-configured LSPs
         --
-        -- Some languages (like typescript) have entire language plugins that can be useful:
-        --    https://github.com/pmizio/typescript-tools.nvim
-        --
-        -- But for many setups, the LSP (`ts_ls`) will work just fine
-        -- ts_ls = {},
-        --
-
         lua_ls = {
           -- cmd = { ... },
           -- filetypes = { ... },
@@ -681,28 +740,27 @@ require('lazy').setup({
       local ensure_installed = vim.tbl_keys(servers or {})
       vim.list_extend(ensure_installed, {
         'stylua', -- Used to format Lua code
-        'pyright',
+        'prettier',
       })
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
 
-      require('mason-lspconfig').setup {
-        handlers = {
-          function(server_name)
-            local server = servers[server_name] or {}
-            -- This handles overriding only values explicitly passed
-            -- by the server configuration above. Useful when disabling
-            -- certain features of an LSP (for example, turning off formatting for ts_ls)
-            server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
-            require('lspconfig')[server_name].setup(server)
-          end,
-        },
-      }
+      -- NOTE: mason-lspconfig v2 removed the `handlers` option, so servers are
+      -- now configured and enabled through the native vim.lsp.config/enable API.
+      -- Only enable servers configured below; do not start old installed servers.
+      require('mason-lspconfig').setup { automatic_enable = false }
+      for server_name, server in pairs(servers) do
+        -- This handles overriding only values explicitly passed
+        -- by the server configuration above. Useful when disabling
+        -- certain features of an LSP (for example, turning off formatting for ts_ls)
+        server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
+        vim.lsp.config(server_name, server)
+        vim.lsp.enable(server_name)
+      end
     end,
   },
 
-  { -- Autoformat
+  { -- Manual formatting
     'stevearc/conform.nvim',
-    event = { 'BufWritePre' },
     cmd = { 'ConformInfo' },
     keys = {
       {
@@ -715,30 +773,17 @@ require('lazy').setup({
       },
     },
     opts = {
-      notify_on_error = false,
-      format_on_save = function(bufnr)
-        -- Disable "format_on_save lsp_fallback" for languages that don't
-        -- have a well standardized coding style. You can add additional
-        -- languages here or re-enable it for the disabled ones.
-        local disable_filetypes = { c = true, cpp = true }
-        local lsp_format_opt
-        if disable_filetypes[vim.bo[bufnr].filetype] then
-          lsp_format_opt = 'never'
-        else
-          lsp_format_opt = 'fallback'
-        end
-        return {
-          timeout_ms = 500,
-          lsp_format = lsp_format_opt,
-        }
-      end,
+      notify_on_error = true,
       formatters_by_ft = {
         lua = { 'stylua' },
-        -- Conform can also run multiple formatters sequentially
-        -- python = { "isort", "black" },
-        --
-        -- You can use 'stop_after_first' to run the first available formatter from the list
-        -- javascript = { "prettierd", "prettier", stop_after_first = true },
+        python = { 'ruff_format' },
+        javascript = { 'prettier' },
+        javascriptreact = { 'prettier' },
+        typescript = { 'prettier' },
+        typescriptreact = { 'prettier' },
+        json = { 'prettier' },
+        jsonc = { 'prettier' },
+        yaml = { 'prettier' },
       },
     },
   },
@@ -748,29 +793,29 @@ require('lazy').setup({
     event = 'InsertEnter',
     dependencies = {
       -- Snippet Engine & its associated nvim-cmp source
-      {
-        'L3MON4D3/LuaSnip',
-        build = (function()
-          -- Build Step is needed for regex support in snippets.
-          -- This step is not supported in many windows environments.
-          -- Remove the below condition to re-enable on windows.
-          if vim.fn.has 'win32' == 1 or vim.fn.executable 'make' == 0 then
-            return
-          end
-          return 'make install_jsregexp'
-        end)(),
-        dependencies = {
-          -- `friendly-snippets` contains a variety of premade snippets.
-          --    See the README about individual language/framework/plugin snippets:
-          --    https://github.com/rafamadriz/friendly-snippets
-          -- {
-          --   'rafamadriz/friendly-snippets',
-          --   config = function()
-          --     require('luasnip.loaders.from_vscode').lazy_load()
-          --   end,
-          -- },
-        },
-      },
+      -- {
+      --   'L3MON4D3/LuaSnip',
+      --   build = (function()
+      --     -- Build Step is needed for regex support in snippets.
+      --     -- This step is not supported in many windows environments.
+      --     -- Remove the below condition to re-enable on windows.
+      --     if vim.fn.has 'win32' == 1 or vim.fn.executable 'make' == 0 then
+      --       return
+      --     end
+      --     return 'make install_jsregexp'
+      --   end)(),
+      --   dependencies = {
+      --     -- `friendly-snippets` contains a variety of premade snippets.
+      --     --    See the README about individual language/framework/plugin snippets:
+      --     --    https://github.com/rafamadriz/friendly-snippets
+      --     -- {
+      --     --   'rafamadriz/friendly-snippets',
+      --     --   config = function()
+      --     --     require('luasnip.loaders.from_vscode').lazy_load()
+      --     --   end,
+      --     -- },
+      --   },
+      -- },
       'saadparwaiz1/cmp_luasnip',
 
       -- Adds other completion capabilities.
@@ -852,7 +897,7 @@ require('lazy').setup({
             group_index = 0,
           },
           -- { name = 'copilot' },
-          --{ name = 'nvim_lsp' }, -- comment LSPMO
+          { name = 'nvim_lsp' }, -- comment LSPMO
           { name = 'luasnip' },
           { name = 'path' },
         },
@@ -899,6 +944,7 @@ require('lazy').setup({
       -- - sd'   - [S]urround [D]elete [']quotes
       -- - sr)'  - [S]urround [R]eplace [)] [']
       require('mini.surround').setup()
+      require('custom.sessions').setup()
 
       -- Simple and easy statusline.
       --  You could remove this setup call if you don't like it,
@@ -925,7 +971,10 @@ require('lazy').setup({
     main = 'nvim-treesitter.configs', -- Sets main module to use for opts
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter`
     opts = {
-      ensure_installed = { 'bash', 'c_sharp', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc', 'cpp' },
+      ensure_installed = {
+        'bash', 'c_sharp', 'c', 'cpp', 'diff', 'html', 'javascript', 'json', 'lua', 'luadoc',
+        'markdown', 'markdown_inline', 'python', 'query', 'tsx', 'typescript', 'vim', 'vimdoc', 'yaml',
+      },
       -- Autoinstall languages that are not installed
       auto_install = true,
       highlight = {
@@ -1105,8 +1154,65 @@ require('lazy').setup({
     'nvim-tree/nvim-tree.lua',
     dependencies = { 'nvim-tree/nvim-web-devicons' },
     config = function()
-      require('nvim-tree').setup {}
+      require('nvim-tree').setup {
+        tab = { sync = { open = true, close = true } },
+        actions = { open_file = { quit_on_open = false } },
+        on_attach = function(bufnr)
+          local api = require 'nvim-tree.api'
+          api.config.mappings.default_on_attach(bufnr)
+          vim.keymap.set('n', '<CR>', function()
+            local node = api.tree.get_node_under_cursor()
+            if not node then
+              return
+            end
+            -- Directories expand in place without creating a file tab.
+            if node.type == 'directory' or node.name == '..' then
+              api.node.open.edit(node)
+              return
+            end
+            -- Reuse startup buffers, including Alpha's unnamed nofile dashboard.
+            local empty_tab = true
+            local startup_win
+            for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+              local buf = vim.api.nvim_win_get_buf(win)
+              if vim.bo[buf].filetype == 'alpha' and not vim.bo[buf].modified then
+                startup_win = startup_win or win
+              elseif vim.bo[buf].buftype == '' then
+                local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+                local name = vim.api.nvim_buf_get_name(buf)
+                local unnamed_or_directory = name == '' or vim.fn.isdirectory(name) == 1
+                if not unnamed_or_directory or vim.bo[buf].modified or #lines ~= 1 or lines[1] ~= '' then
+                  empty_tab = false
+                  break
+                end
+                startup_win = startup_win or win
+              elseif vim.bo[buf].filetype ~= 'NvimTree' then
+                empty_tab = false
+                break
+              end
+            end
+            if empty_tab and startup_win then
+              -- The tree's window picker excludes Alpha's nofile buffer.
+              vim.api.nvim_set_current_win(startup_win)
+              vim.cmd.edit(vim.fn.fnameescape(node.link_to or node.absolute_path))
+              api.tree.focus()
+            elseif empty_tab then
+              api.node.open.edit(node, { focus = false })
+            else
+              api.node.open.tab(node, { focus = false })
+            end
+          end, {
+            buffer = bufnr,
+            silent = true,
+            nowait = true,
+            desc = 'Open file in tab, keep explorer focus / expand directory',
+          })
+        end,
+      }
       vim.api.nvim_set_keymap('n', '<C-n>', ':NvimTreeToggle<CR>', { noremap = true, silent = true })
+      vim.keymap.set('n', '<leader>e', function()
+        require('nvim-tree.api').tree.find_file { open = true, focus = true }
+      end, { desc = 'Focus file [E]xplorer at current file' })
     end,
   },
   -- {
@@ -1133,6 +1239,102 @@ require('lazy').setup({
   --     require('copilot_cmp').setup()
   --   end,
   -- },
+
+  -- GitHub Copilot Chat
+  {
+    'CopilotC-Nvim/CopilotChat.nvim',
+    branch = 'main',
+    dependencies = {
+      { 'github/copilot.vim' }, -- or zbirenbaum/copilot.lua
+      { 'nvim-lua/plenary.nvim' }, -- for curl, log wrapper
+    },
+    build = 'make tiktoken', -- Only on MacOS or Linux
+    opts = {
+      debug = false, -- Enable debugging
+      -- See Configuration section for options
+    },
+    config = function()
+      require('CopilotChat').setup {
+        model = 'claude-3.5-sonnet', -- Valid Claude model (closest to Claude Sonnet 4.5)
+        agent = 'copilot', -- Enable agent mode for multi-step reasoning and tool use
+
+        -- Chat window configuration
+        window = {
+          layout = 'vertical', -- 'vertical', 'horizontal', 'float'
+          width = 0.4, -- Percentage of screen width
+          height = 0.6, -- Percentage of screen height
+          border = 'rounded',
+        },
+
+        -- Enable context and embeddings for better responses
+        context = 'buffers', -- Use buffer context
+
+        -- Selection configuration
+        selection = function(source)
+          local select = require 'CopilotChat.select'
+          return select.visual(source) or select.buffer(source)
+        end,
+
+        -- Prompts for agent-like behavior
+        prompts = {
+          Explain = 'Explain how the selected code works step by step.',
+          Review = 'Review the selected code for potential improvements, bugs, and best practices.',
+          Fix = 'Fix any bugs or issues in the selected code.',
+          Optimize = 'Optimize the selected code for better performance and readability.',
+          Docs = 'Generate comprehensive documentation for the selected code.',
+          Tests = 'Generate unit tests for the selected code.',
+          Agent = {
+            prompt = 'Act as an expert programming agent. Analyze the code, use available tools, and provide a complete solution with implementation.',
+            system_prompt = 'You are an AI agent with access to code analysis tools. Take action to solve problems completely.',
+          },
+        },
+      }
+
+      -- Keybindings
+      local opts = { noremap = true, silent = true }
+
+      -- Open chat
+      vim.keymap.set('n', '<leader>cc', ':CopilotChatToggle<CR>', vim.tbl_extend('force', opts, { desc = '[C]opilot [C]hat toggle' }))
+
+      -- Quick chat with visual selection
+      vim.keymap.set('v', '<leader>cc', ':CopilotChatVisual<CR>', vim.tbl_extend('force', opts, { desc = '[C]opilot [C]hat with selection' }))
+
+      -- Explain code
+      vim.keymap.set('v', '<leader>cx', ':CopilotChatExplain<CR>', vim.tbl_extend('force', opts, { desc = '[C]opilot [E]xplain' }))
+
+      -- Review code
+      vim.keymap.set('v', '<leader>cr', ':CopilotChatReview<CR>', vim.tbl_extend('force', opts, { desc = '[C]opilot [R]eview' }))
+
+      -- Fix code
+      vim.keymap.set('v', '<leader>cf', ':CopilotChatFix<CR>', vim.tbl_extend('force', opts, { desc = '[C]opilot [F]ix' }))
+
+      -- Optimize code
+      vim.keymap.set('v', '<leader>co', ':CopilotChatOptimize<CR>', vim.tbl_extend('force', opts, { desc = '[C]opilot [O]ptimize' }))
+
+      -- Generate docs
+      vim.keymap.set('v', '<leader>cd', ':CopilotChatDocs<CR>', vim.tbl_extend('force', opts, { desc = '[C]opilot [D]ocs' }))
+
+      -- Generate tests
+      vim.keymap.set('v', '<leader>ct', ':CopilotChatTests<CR>', vim.tbl_extend('force', opts, { desc = '[C]opilot [T]ests' }))
+
+      -- Agent mode - act autonomously to solve problems
+      vim.keymap.set('n', '<leader>ca', function()
+        local input = vim.fn.input 'Agent task: '
+        if input ~= '' then
+          vim.cmd('CopilotChat @agent ' .. input)
+        end
+      end, vim.tbl_extend('force', opts, { desc = '[C]opilot [A]gent' }))
+
+      -- Ask a question
+      vim.keymap.set('n', '<leader>cq', function()
+        local input = vim.fn.input 'Ask Copilot: '
+        if input ~= '' then
+          vim.cmd('CopilotChat ' .. input)
+        end
+      end, vim.tbl_extend('force', opts, { desc = '[C]opilot [Q]uestion' }))
+    end,
+  },
+
   -- END OF MY PLUGINS
 }, {
   ui = {
